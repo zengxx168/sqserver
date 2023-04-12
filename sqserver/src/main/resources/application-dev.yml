@@ -1,0 +1,35 @@
+#开发环境配置
+spring:
+
+  #缓存会话
+  redis:
+    database: 5
+    host: 172.16.3.253
+    password: redis@123
+    port: 6379
+    jedis:
+      pool:
+        max-active: 8
+        max-wait: -1ms
+        min-idle: 0
+        max-idle: 8
+
+  #数据库
+  datasource:
+    url: jdbc:mysql://172.16.3.241:3306/battle?serverTimezone=GMT%2B8&characterEncoding=utf8&characterSetResults=utf8&autoReconnect=true&failOverReadOnly=false
+    username: root
+    password: 123456
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 10
+      auto-commit: true
+      idle-timeout: 30000
+      pool-name: MyHikariCP
+      max-lifetime: 18000000
+      connection-timeout: 30000
+
+#开发环境配置
+server-cfg:
+  app-key: zjqMbClH6VOEgBXGqdEIlNJcF4DNIKsf

@@ -1,0 +1,52 @@
+server:
+  port: 8083
+  servlet:
+    context-path: /
+    session:
+      timeout: PT30M
+
+#SPRING
+spring:
+  application:
+    name: battle-h5
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 50MB
+  aop:
+    proxy-target-class: true
+  cache:
+    type: cache2k
+  main:
+    banner-mode: off
+  messages:
+    basename: i18n.message
+  profiles:
+    active: dev #
+
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+    default-property-inclusion: NON_NULL
+
+  thymeleaf:
+    cache: false
+    prefix: classpath:/static/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML5
+
+  web:
+    resources:
+      static-locations: classpath:/
+
+#MyBatis
+mybatis-plus:
+  mapper-locations: classpath:/mapper/**/*.xml
+  typeAliasesPackage: io.battle.*.domain;
+  type-handlers-package: io.battle.typeHandler
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    #log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+

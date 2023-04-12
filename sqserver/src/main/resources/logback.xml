@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="log.proj" source="spring.application.name"/>
+    <substitutionProperty name="log.base" value="logs/${log.proj}"/>
+    <substitutionProperty name="max.size" value="100MB"/>
+    <jmxConfigurator/>
+
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date [${log.proj}:%thread] %-5level %logger{80} - %msg%n</pattern>
+        </layout>
+    </appender>
+
+    <appender name="file.debug" class="ch.qos.logback.core.rolling.RollingFileAppender"><!-- All Log Info -->
+        <File>${log.base}/${log.proj}.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.base}/${log.proj}_%d{yyyy-MM-dd}.%i.log</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${max.size}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date [%thread] %-5level %logger{80} - %msg%n</pattern>
+        </layout>
+    </appender>
+
+    <appender name="file.info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.base}/${log.proj}_info_%d{yyyy-MM-dd}.%i.log</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${max.size}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date [%thread] %-5level %logger{80} - %msg%n</pattern>
+        </layout>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <appender name="file.error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- <File>${log.base}/${log.proj}_info.log</File> -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.base}/${log.proj}_error_%d{yyyy-MM-dd}.%i.log</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${max.size}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date [%thread] %-5level %logger{80} - %msg%n</pattern>
+        </layout>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <appender name="file.warn" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- <File>${log.base}/${log.proj}_warn.log</File> -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.base}/${log.proj}_warn_%d{yyyy-MM-dd}.%i.log</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${max.size}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date [%thread] %-5level %logger{80} - %msg%n</pattern>
+        </layout>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter"><!-- 临界值过滤器,过滤掉低于指定临界值的日志 -->
+            <level>WARN</level>
+        </filter>
+    </appender>
+
+    <appender name="security.info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${log.base}/security.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.base}/security_%d{yyyy-MM-dd}.%i.log</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${max.size}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>[d]=%date %msg%n</pattern>
+        </layout>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <appender name="fight.info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${log.base}/fight.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${log.base}/fight_%d{yyyy-MM-dd}.%i.log</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${max.size}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date %msg%n</pattern>
+        </layout>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <root level="info" additivity="false">
+        <appender-ref ref="stdout"/>
+        <!-- <appender-ref ref="file.debug" /> -->
+        <appender-ref ref="file.info"/>
+        <appender-ref ref="file.error"/>
+        <!-- <appender-ref ref="file.warn" /> -->
+    </root>
+
+    <logger name="com.valkyrie.commons.log.Lgr" additivity="false">
+        <appender-ref ref="security.info"/>
+        <level value="INFO"/>
+    </logger>
+    <logger name="com.valkyrie.broker.log.FightLogger" additivity="false">
+        <appender-ref ref="fight.info"/>
+        <level value="INFO"/>
+    </logger>
+
+    <logger name="org.apache.kafka.clients.NetworkClient" additivity="false">
+        <appender-ref ref="stdout"/>
+        <level value="ERROR"/>
+    </logger>
+    <logger name="org.springframework.kafka.KafkaListenerEndpointContainer" additivity="false">
+        <appender-ref ref="stdout"/>
+        <level value="ERROR"/>
+    </logger>
+    <logger name="org.apache.kafka.clients.consumer.internals.AbstractCoordinator" additivity="false">
+        <appender-ref ref="stdout"/>
+        <level value="ERROR"/>
+    </logger>
+    <logger name="org.apache.kafka.clients.consumer.internals.ConsumerCoordinator" additivity="false">
+        <appender-ref ref="stdout"/>
+        <level value="ERROR"/>
+    </logger>
+    <logger name="org.springframework.kafka.listener.KafkaMessageListenerContainer" additivity="false">
+        <appender-ref ref="stdout"/>
+        <level value="ERROR"/>
+    </logger>
+
+</configuration>
