@@ -17,6 +17,8 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.MemoryAttribute;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +42,9 @@ public class HttpServer implements BeanPostProcessor {
     private int port;
     private final Map<String, HandlerMethod> handlers = new HashMap<>();
 
+    EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+    EventLoopGroup workerGroup = new NioEventLoopGroup(16);
+
     @Resource
     private AuthInterceptor authInterceptor;
 
@@ -61,35 +66,37 @@ public class HttpServer implements BeanPostProcessor {
     }
 
     public void start() {
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        new Thread(() -> {
+            try {
+                ServerBootstrap b = new ServerBootstrap();
+                b.group(bossGroup, workerGroup)
+                        .channel(NioServerSocketChannel.class)
+                        .childHandler(new ChannelInitializer<SocketChannel>() {
+                            @Override
+                            public void initChannel(SocketChannel ch) throws Exception {
+                                ChannelPipeline p = ch.pipeline();
+                                p.addLast(new HttpServerCodec());
+                                p.addLast(new HttpObjectAggregator(65536));
+                                p.addLast(new ChunkedWriteHandler());
+                                p.addLast(new NettyHttpServerHandler());
+                            }
+                        })
+                        .option(ChannelOption.SO_BACKLOG, 128)
+                        .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-        try {
-            ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        public void initChannel(SocketChannel ch) throws Exception {
-                            ChannelPipeline p = ch.pipeline();
-                            p.addLast(new HttpServerCodec());
-                            p.addLast(new HttpObjectAggregator(65536));
-                            p.addLast(new ChunkedWriteHandler());
-                            p.addLast(new NettyHttpServerHandler());
-                        }
-                    })
-                    .option(ChannelOption.SO_BACKLOG, 128)
-                    .childOption(ChannelOption.SO_KEEPALIVE, true);
+                ChannelFuture f = b.bind(port).sync();
+                System.out.println("HttpServer listening on port " + port);
+                f.channel().closeFuture().sync();
+            } catch (Exception e) {
+                log.error("启动异常", e);
+            }
+        }).start();
+    }
 
-            ChannelFuture f = b.bind(port).sync();
-            System.out.println("NettyHttpServer listening on port " + port);
-            f.channel().closeFuture().sync();
-        } catch (Exception e) {
-            log.error("启动异常", e);
-        } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
-        }
+    @PreDestroy
+    public void stop() {
+        workerGroup.shutdownGracefully();
+        bossGroup.shutdownGracefully();
     }
 
     private String key(String[] params) {

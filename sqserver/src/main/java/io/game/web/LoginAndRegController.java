@@ -22,6 +22,8 @@ public class LoginAndRegController {
 
         System.out.println(data);
 
+
+
         return response;
     }
 }
