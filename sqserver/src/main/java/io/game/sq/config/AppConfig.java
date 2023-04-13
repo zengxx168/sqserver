@@ -6,7 +6,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @EnableAsync
 @Configuration
-@ComponentScan(basePackages = "io.game")
+@ComponentScan(basePackages = "io.game.sq")
 public class AppConfig {
 
 }
