@@ -99,7 +99,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         try {
             ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
-            log.info("broker client 启动游戏对外服 ! port: {}", port);
+            log.info("broker client 启动游戏Socket服务， 端口: {}", port);
             channelFuture.channel().closeFuture().sync();
         } catch (Exception e) {
             log.error("启用失败", e);

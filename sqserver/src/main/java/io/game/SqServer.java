@@ -60,5 +60,6 @@ public class SqServer {
         //启动broker Socket服务
         SqServer sqServer = context.getBean(SqServer.class);
         sqServer.startup();
+        System.out.println("启动成功.........");
     }
 }
