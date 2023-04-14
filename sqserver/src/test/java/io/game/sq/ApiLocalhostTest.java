@@ -40,7 +40,7 @@ public class ApiLocalhostTest {
 	
 	public static void main(String[] args) throws Exception {
 //		user_regster();
-		for (int i=0;i<100000000;i++) {
+		for (int i=0;i<10;i++) {
 
 			userLogin();
 		}

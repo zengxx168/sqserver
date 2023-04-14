@@ -12,6 +12,7 @@
     <modules>
         <module>sqserver</module>
         <module>protos</module>
+        <module>httpserver</module>
     </modules>
 
     <properties>

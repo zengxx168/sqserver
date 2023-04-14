@@ -31,7 +31,7 @@ import java.util.Map;
  */
 @Component("publishProcessor")
 public class PublishProcessor implements NettyRequestProcessor, BeanPostProcessor {
-    private final String basePackage = "io.game";
+    private final String basePackage = "io.game.sq";
     final Map<Integer, ApiMethod> tables = new NonBlockingHashMap<>(128);
     @Resource
     private SessionsManager sessionsManager;

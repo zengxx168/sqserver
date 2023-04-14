@@ -1,5 +1,6 @@
 package io.game.sq.web;
 
+import io.game.sq.core.user.domain.User;
 import io.game.sq.core.user.service.IUserService;
 import io.game.sq.web.domain.ApiResponse;
 import jakarta.annotation.Resource;
@@ -16,13 +17,11 @@ public class LoginAndRegController {
     @PostMapping(params = {"method=user.login", "v=1.0.0"})
     public Object login(String username, String password) {
         ApiResponse response = new ApiResponse();
-        String data = userService.byObjectId(9L);
+        User data = userService.byObjectId(username);
         System.out.println(data);
-        data = userService.byObjectId(9L);
+        data = userService.byObjectId(username);
 
         System.out.println(data);
-
-
 
         return response;
     }
