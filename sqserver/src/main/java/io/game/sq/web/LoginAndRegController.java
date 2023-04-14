@@ -4,6 +4,7 @@ import io.game.sq.core.user.domain.User;
 import io.game.sq.core.user.service.IUserService;
 import io.game.sq.web.domain.ApiResponse;
 import jakarta.annotation.Resource;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class LoginAndRegController {
     @Resource
     private IUserService userService;
+    @Resource
+    private RedisTemplate redisTemplate;
 
     @PostMapping(params = {"method=user.login", "v=1.0.0"})
     public Object login(String username, String password) {
@@ -21,7 +24,9 @@ public class LoginAndRegController {
         System.out.println(data);
         data = userService.byObjectId(username);
 
-        System.out.println(data);
+        redisTemplate.opsForValue().set("test", "test");
+        Object v = redisTemplate.opsForValue().get("test");
+        System.out.println(v);
 
         return response;
     }
