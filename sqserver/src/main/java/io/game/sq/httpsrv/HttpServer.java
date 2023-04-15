@@ -6,7 +6,6 @@ import io.game.sq.httpsrv.filter.Interceptor;
 import io.game.sq.web.domain.ApiResponse;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -101,8 +100,6 @@ public class HttpServer implements BeanPostProcessor {
     public void start() {
         try {
             ServerBootstrap b = new ServerBootstrap();
-            // 优化内存分配
-            PooledByteBufAllocator allocator = new PooledByteBufAllocator();
             b.group(bossGroup, workerGroup)
                     .channel(isLinux() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -115,7 +112,6 @@ public class HttpServer implements BeanPostProcessor {
                             p.addLast(bizGroup, new NettyHttpServerHandler());
                             // 禁用Nagle算法
                             ch.config().setOption(ChannelOption.TCP_NODELAY, true);
-                            ch.config().setAllocator(allocator);
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)
