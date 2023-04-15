@@ -159,7 +159,7 @@ public class HttpServer implements BeanPostProcessor {
                     return;
                 }
 
-                // 构造请求和响应对象
+                // 验证会话是否过期
                 Method method = handler.getMethod();
                 String token = request.headers().get("token");
                 if (method.isAnnotationPresent(ApiMethod.class)) {
