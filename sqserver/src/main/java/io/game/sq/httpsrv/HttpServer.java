@@ -30,6 +30,7 @@ import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,10 +42,10 @@ public class HttpServer implements BeanPostProcessor {
     private int port;
     private final Map<String, HandlerMethod> handlerMappings = new HashMap<>();
     // 拦截器，最大支持16个
-    private final Interceptor[] interceptors = new Interceptor[16];
+    private final List<Interceptor> interceptors = new ArrayList<>(16);
 
     EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-    EventLoopGroup workerGroup = new NioEventLoopGroup(16);
+    EventLoopGroup workerGroup = new NioEventLoopGroup(128);
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -55,9 +56,9 @@ public class HttpServer implements BeanPostProcessor {
         }
 
         // 拦截器
-        if (beanClass.isAssignableFrom(Interceptor.class)) {
+        if (bean instanceof Interceptor) {
             Order index = beanClass.getAnnotation(Order.class);
-            interceptors[index.value()] = (Interceptor) bean;
+            interceptors.add(index.value(), (Interceptor) bean);
         }
 
         // 请求映射
