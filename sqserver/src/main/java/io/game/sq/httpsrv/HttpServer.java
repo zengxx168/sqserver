@@ -38,8 +38,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @Slf4j
 @Component
@@ -146,21 +144,9 @@ public class HttpServer implements BeanPostProcessor {
     }
 
     class NettyHttpServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
-        ExecutorService executor = Executors.newFixedThreadPool(1024);
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-            executor.submit(() -> {
-                try {
-                    // 业务处理
-                    this.handle(ctx, request);
-                } catch (Exception e) {
-                    log.error("业务处理异常", e);
-                }
-            });
-        }
-
-        private void handle(ChannelHandlerContext ctx, FullHttpRequest request) {
             FullHttpResponse response = null;
             try {
                 // 获取请求路径和 HTTP 方法
