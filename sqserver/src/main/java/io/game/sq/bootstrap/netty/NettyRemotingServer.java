@@ -26,8 +26,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @author Administrator
@@ -127,18 +125,10 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
     @ChannelHandler.Sharable
     class NettyServerHandler extends SimpleChannelInboundHandler<Command> {
-        private ExecutorService executor = Executors.newFixedThreadPool(1024);
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Command command) {
-            if (1003 == command.getCmd()) {
-                processMessageReceived(ctx, command);
-                return;
-            }
-
-            executor.submit(() -> {
-                processMessageReceived(ctx, command);
-            });
+            processMessageReceived(ctx, command);
         }
 
         @Override
