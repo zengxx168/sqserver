@@ -38,6 +38,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Component
@@ -144,43 +146,45 @@ public class HttpServer implements BeanPostProcessor {
     }
 
     class NettyHttpServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+        ExecutorService executor = Executors.newFixedThreadPool(1024);
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-            FullHttpResponse response = null;
-            try {
-                // 获取请求路径和 HTTP 方法
-                Map<String, String> params = getParams(request);
-                for (Interceptor interceptor : interceptors) {
-                    if (!interceptor.validate(params, request.headers())) {
-                        ApiResponse returnValue = new ApiResponse("500").setMessage("参数校验失败");
-                        response = buildResponse(returnValue);
+            // 获取请求路径和 HTTP 方法
+            Map<String, String> params = getParams(request);
+            executor.submit(() -> {
+                FullHttpResponse response = null;
+                try {
+                    for (Interceptor interceptor : interceptors) {
+                        if (!interceptor.validate(params, request.headers())) {
+                            ApiResponse returnValue = new ApiResponse("500").setMessage("参数校验失败");
+                            response = buildResponse(returnValue);
+                            return;
+                        }
+                    }
+                    // 查找匹配的处理器
+                    HandlerMethod handler = handlerMappings.get(key(params));
+                    if (handler == null) {
+                        // 没有匹配的处理器，返回 404 Not Found
+                        response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
                         return;
                     }
-                }
 
-                // 查找匹配的处理器
-                HandlerMethod handler = handlerMappings.get(key(params));
-                if (handler == null) {
-                    // 没有匹配的处理器，返回 404 Not Found
-                    response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
-                    return;
+                    // 构造请求和响应对象
+                    Object controller = handler.getBean();
+                    Method method = handler.getMethod();
+                    Object[] args = getMethodArguments(params, method);
+                    // 调用处理器方法
+                    Object returnValue = method.invoke(controller, args);
+                    // 根据返回值构造响应
+                    response = buildResponse(returnValue);
+                } catch (Exception e) {
+                    response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                } finally {
+                    response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
+                    ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
                 }
-
-                // 构造请求和响应对象
-                Object controller = handler.getBean();
-                Method method = handler.getMethod();
-                Object[] args = getMethodArguments(params, method);
-                // 调用处理器方法
-                Object returnValue = method.invoke(controller, args);
-                // 根据返回值构造响应
-                response = buildResponse(returnValue);
-            } catch (Exception e) {
-                response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
-            } finally {
-                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
-                ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
-            }
+            });
         }
 
         private Map<String, String> getParams(FullHttpRequest request) {
