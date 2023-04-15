@@ -1,5 +1,6 @@
 package io.game.sq.httpsrv.filter;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +11,7 @@ import java.util.Map;
 public class TokenInterceptor implements Interceptor {
 
     @Override
-    public boolean validate(Map<String, String> params, Map<String, String> headers) {
+    public boolean validate(Map<String, String> params, HttpHeaders headers) {
 
 
 

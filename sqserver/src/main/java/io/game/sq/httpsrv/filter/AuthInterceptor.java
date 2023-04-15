@@ -2,6 +2,7 @@ package io.game.sq.httpsrv.filter;
 
 import io.game.sq.httpsrv.signtype.Md5;
 import io.game.sq.web.domain.ApiResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
@@ -22,9 +23,13 @@ import java.util.Map;
 public class AuthInterceptor implements Interceptor {
     public static String key = "nviyWPlk78Qh8ALo4jQh6MK2NukUf2YU";
 
-    public boolean validate(Map<String, String> params) {
+    public boolean validate(Map<String, String> params, HttpHeaders headers) {
         // 签名不能为空
         ApiResponse rsp = new ApiResponse("500");
+        if (!headers.contains("appid")) {
+            return false;
+        }
+
         String s = String.valueOf(params.get("sign"));
         if (!params.containsKey("sign") || StringUtils.isEmpty(s)) {
             return false;

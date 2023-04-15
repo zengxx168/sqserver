@@ -30,7 +30,6 @@ import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,8 @@ public class HttpServer implements BeanPostProcessor {
     @Setter
     private int port;
     private final Map<String, HandlerMethod> handlerMappings = new HashMap<>();
-    private final List<Interceptor> interceptors = new ArrayList<>();
+    // 拦截器，最大支持16个
+    private final Interceptor[] interceptors = new Interceptor[16];
 
     EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     EventLoopGroup workerGroup = new NioEventLoopGroup(16);
@@ -52,7 +52,7 @@ public class HttpServer implements BeanPostProcessor {
         // 拦截器
         if (beanClass.isAssignableFrom(Interceptor.class)) {
             Order index = beanClass.getAnnotation(Order.class);
-            interceptors.add(index.value(), (Interceptor) bean);
+            interceptors[index.value()] = (Interceptor) bean;
         }
 
         // 请求映射
@@ -116,9 +116,8 @@ public class HttpServer implements BeanPostProcessor {
             try {
                 // 获取请求路径和 HTTP 方法
                 Map<String, String> params = getParams(request);
-                Map<String, String> headers = getHeaders(request);
                 for (Interceptor interceptor : interceptors) {
-                    if (!interceptor.validate(params, headers)) {
+                    if (!interceptor.validate(params, request.headers())) {
                         ApiResponse returnValue = new ApiResponse("500").setMessage("参数校验失败");
                         response = buildResponse(returnValue);
                         return;
@@ -168,18 +167,6 @@ public class HttpServer implements BeanPostProcessor {
                 }
             }
             return params;
-        }
-
-        //获取请求中的header
-        private Map<String, String> getHeaders(FullHttpRequest request) {
-            Map<String, String> headers = new HashMap<>();
-            HttpHeaders httpHeaders = request.headers();
-            if (httpHeaders != null && !httpHeaders.isEmpty()) {
-                httpHeaders.forEach(header -> {
-                    headers.put(header.getKey(), header.getValue());
-                });
-            }
-            return headers;
         }
 
         private String key(Map<String, String> params) {
