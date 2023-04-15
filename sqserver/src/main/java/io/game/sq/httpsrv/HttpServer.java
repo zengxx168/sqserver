@@ -38,14 +38,18 @@ import java.util.Map;
 @Slf4j
 @Component
 public class HttpServer implements BeanPostProcessor {
+    private final String format = "method=%s|v=%s";
+    private final String format2 = "%s|%s";
+
     @Setter
     private int port;
-    private final Map<String, HandlerMethod> handlerMappings = new HashMap<>();
+    private final Map<String, HandlerMethod> handlerMappings = new HashMap<>(128);
     // 拦截器，最大支持16个
     private final List<Interceptor> interceptors = new ArrayList<>(16);
 
-    EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-    EventLoopGroup workerGroup = new NioEventLoopGroup(128);
+    private final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+    private final EventLoopGroup workerGroup = new NioEventLoopGroup(16);
+    private final EventLoopGroup bizGroup = new NioEventLoopGroup(1024);
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -88,7 +92,7 @@ public class HttpServer implements BeanPostProcessor {
                             p.addLast(new HttpServerCodec());
                             p.addLast(new HttpObjectAggregator(65536));
                             p.addLast(new ChunkedWriteHandler());
-                            p.addLast(new NettyHttpServerHandler());
+                            p.addLast(bizGroup, new NettyHttpServerHandler());
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)
@@ -109,9 +113,9 @@ public class HttpServer implements BeanPostProcessor {
 
     private String key(String[] params) {
         if (params[0].startsWith("method=")) {
-            return String.format("%s|%s", params[0], params[1]);
+            return String.format(format2, params[0], params[1]);
         }
-        return String.format("%s|%s", params[1], params[0]);
+        return String.format(format2, params[1], params[0]);
     }
 
     class NettyHttpServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -179,7 +183,7 @@ public class HttpServer implements BeanPostProcessor {
         private String key(Map<String, String> params) {
             String method = params.get("method");
             String v = params.get("v");
-            return String.format("method=%s|v=%s", method, v);
+            return String.format(format, method, v);
         }
 
         private Object[] getMethodArguments(Map<String, String> params, Method method) {
