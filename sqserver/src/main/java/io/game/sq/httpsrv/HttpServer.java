@@ -49,6 +49,11 @@ public class HttpServer implements BeanPostProcessor {
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> beanClass = bean.getClass();
+        if (!beanClass.getPackageName().startsWith("io.game.sq")) {
+            log.info("bean: {}", beanClass.getName());
+            return bean;
+        }
+
         // 拦截器
         if (beanClass.isAssignableFrom(Interceptor.class)) {
             Order index = beanClass.getAnnotation(Order.class);
@@ -166,6 +171,7 @@ public class HttpServer implements BeanPostProcessor {
                     params.put(attribute.getName(), attribute.getValue());
                 }
             }
+            decoder.destroy();
             return params;
         }
 
