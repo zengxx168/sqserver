@@ -1,7 +1,7 @@
 package io.game.sq.httpsrv;
 
 import com.alibaba.fastjson.JSON;
-import io.game.sq.httpsrv.filter.AuthInterceptor;
+import io.game.sq.httpsrv.filter.Interceptor;
 import io.game.sq.web.domain.ApiResponse;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -18,11 +18,11 @@ import io.netty.handler.codec.http.multipart.MemoryAttribute;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import jakarta.annotation.PreDestroy;
-import jakarta.annotation.Resource;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +30,7 @@ import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,17 +40,22 @@ import java.util.Map;
 public class HttpServer implements BeanPostProcessor {
     @Setter
     private int port;
-    private final Map<String, HandlerMethod> handlers = new HashMap<>();
+    private final Map<String, HandlerMethod> handlerMappings = new HashMap<>();
+    private final List<Interceptor> interceptors = new ArrayList<>();
 
     EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     EventLoopGroup workerGroup = new NioEventLoopGroup(16);
 
-    @Resource
-    private AuthInterceptor authInterceptor;
-
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> beanClass = bean.getClass();
+        // 拦截器
+        if (beanClass.isAssignableFrom(Interceptor.class)) {
+            Order index = beanClass.getAnnotation(Order.class);
+            interceptors.add(index.value(), (Interceptor) bean);
+        }
+
+        // 请求映射
         if (beanClass.isAnnotationPresent(RestController.class)) {
             Method[] methods = beanClass.getDeclaredMethods();
             for (Method method : methods) {
@@ -57,7 +63,7 @@ public class HttpServer implements BeanPostProcessor {
                     PostMapping requestMapping = method.getAnnotation(PostMapping.class);
                     String key = this.key(requestMapping.params());
                     HandlerMethod handlerMethod = new HandlerMethod(bean, method);
-                    handlers.put(key, handlerMethod);
+                    handlerMappings.put(key, handlerMethod);
                 }
             }
         }
@@ -110,14 +116,17 @@ public class HttpServer implements BeanPostProcessor {
             try {
                 // 获取请求路径和 HTTP 方法
                 Map<String, String> params = getParams(request);
-                if (!authInterceptor.validate(params)) {
-                    ApiResponse returnValue = new ApiResponse("500").setMessage("签名验证失败");
-                    response = buildResponse(returnValue);
-                    return;
+                Map<String, String> headers = getHeaders(request);
+                for (Interceptor interceptor : interceptors) {
+                    if (!interceptor.validate(params, headers)) {
+                        ApiResponse returnValue = new ApiResponse("500").setMessage("参数校验失败");
+                        response = buildResponse(returnValue);
+                        return;
+                    }
                 }
 
                 // 查找匹配的处理器
-                HandlerMethod handler = handlers.get(key(params));
+                HandlerMethod handler = handlerMappings.get(key(params));
                 if (handler == null) {
                     // 没有匹配的处理器，返回 404 Not Found
                     response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
@@ -159,6 +168,18 @@ public class HttpServer implements BeanPostProcessor {
                 }
             }
             return params;
+        }
+
+        //获取请求中的header
+        private Map<String, String> getHeaders(FullHttpRequest request) {
+            Map<String, String> headers = new HashMap<>();
+            HttpHeaders httpHeaders = request.headers();
+            if (httpHeaders != null && !httpHeaders.isEmpty()) {
+                httpHeaders.forEach(header -> {
+                    headers.put(header.getKey(), header.getValue());
+                });
+            }
+            return headers;
         }
 
         private String key(Map<String, String> params) {

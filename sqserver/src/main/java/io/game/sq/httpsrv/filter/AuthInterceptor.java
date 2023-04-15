@@ -4,6 +4,7 @@ import io.game.sq.httpsrv.signtype.Md5;
 import io.game.sq.web.domain.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -16,8 +17,9 @@ import java.util.Map;
  * @version $Id: AuthchkInterceptor.java 2015年8月16日 下午10:20:27 $
  */
 @Slf4j
-@Component
-public class AuthInterceptor {
+@Order(0)
+@Component("authInterceptor")
+public class AuthInterceptor implements Interceptor {
     public static String key = "nviyWPlk78Qh8ALo4jQh6MK2NukUf2YU";
 
     public boolean validate(Map<String, String> params) {
