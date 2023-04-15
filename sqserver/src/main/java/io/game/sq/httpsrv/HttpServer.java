@@ -2,7 +2,10 @@ package io.game.sq.httpsrv;
 
 import cn.hutool.system.SystemUtil;
 import com.alibaba.fastjson.JSON;
-import io.game.sq.httpsrv.filter.Interceptor;
+import io.game.sq.httpsrv.annotations.ApiMethod;
+import io.game.sq.httpsrv.annotations.TokenType;
+import io.game.sq.httpsrv.filter.AuthInterceptor;
+import io.game.sq.httpsrv.filter.TokenInterceptor;
 import io.game.sq.web.domain.ApiResponse;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -22,11 +25,11 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ResourceLeakDetector;
 import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,7 +37,6 @@ import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,8 +50,11 @@ public class HttpServer implements BeanPostProcessor {
     @Setter
     private int port;
     private final Map<String, HandlerMethod> handlerMappings = new HashMap<>(128);
-    // 拦截器，最大支持16个
-    private final List<Interceptor> interceptors = new ArrayList<>(16);
+    // 拦截器
+    @Resource
+    private AuthInterceptor authInterceptor;
+    @Resource
+    private TokenInterceptor tokenInterceptor;
 
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
@@ -70,12 +75,6 @@ public class HttpServer implements BeanPostProcessor {
         if (!beanClass.getPackageName().startsWith("io.game.sq")) {
             log.info("bean: {}", beanClass.getName());
             return bean;
-        }
-
-        // 拦截器
-        if (bean instanceof Interceptor) {
-            Order index = beanClass.getAnnotation(Order.class);
-            interceptors.add(index.value(), (Interceptor) bean);
         }
 
         // 请求映射
@@ -146,13 +145,12 @@ public class HttpServer implements BeanPostProcessor {
             FullHttpResponse response = null;
             try {
                 Map<String, String> params = getParams(request);
-                for (Interceptor interceptor : interceptors) {
-                    if (!interceptor.validate(params, request.headers())) {
-                        ApiResponse returnValue = new ApiResponse("500").setMessage("参数校验失败");
-                        response = buildResponse(returnValue);
-                        return;
-                    }
+                if (!authInterceptor.validate(params, request.headers())) {
+                    ApiResponse returnValue = new ApiResponse("500").setMessage("签名校验失败");
+                    response = buildResponse(returnValue);
+                    return;
                 }
+
                 // 查找匹配的处理器
                 HandlerMethod handler = handlerMappings.get(key(params));
                 if (handler == null) {
@@ -162,8 +160,19 @@ public class HttpServer implements BeanPostProcessor {
                 }
 
                 // 构造请求和响应对象
-                Object controller = handler.getBean();
                 Method method = handler.getMethod();
+                String token = request.headers().get("token");
+                if (method.isAnnotationPresent(ApiMethod.class)) {
+                    TokenType tkt = method.getAnnotation(ApiMethod.class).value();
+                    if (null != tkt && tkt.isCheck(token) && !tokenInterceptor.validate(params, request.headers())) {
+                        ApiResponse returnValue = new ApiResponse("500").setMessage("会话过期，请重新登录");
+                        response = buildResponse(returnValue);
+                        return;
+                    }
+                }
+
+                // 执行主业务逻辑
+                Object controller = handler.getBean();
                 Object[] args = getMethodArguments(params, method);
                 // 调用处理器方法
                 Object returnValue = method.invoke(controller, args);

@@ -2,6 +2,8 @@ package io.game.sq.web;
 
 import io.game.sq.core.user.domain.User;
 import io.game.sq.core.user.service.IUserService;
+import io.game.sq.httpsrv.annotations.ApiMethod;
+import io.game.sq.httpsrv.annotations.TokenType;
 import io.game.sq.web.domain.ApiResponse;
 import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,6 +19,7 @@ public class LoginAndRegController {
     @Resource
     private RedisTemplate redisTemplate;
 
+    @ApiMethod(TokenType.NO)
     @PostMapping(params = {"method=user.login", "v=1.0.0"})
     public Object login(String username, String password) {
         ApiResponse response = new ApiResponse();
