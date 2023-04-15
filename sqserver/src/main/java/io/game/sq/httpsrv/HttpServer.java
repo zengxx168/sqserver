@@ -38,8 +38,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @Slf4j
 @Component
@@ -55,17 +53,14 @@ public class HttpServer implements BeanPostProcessor {
 
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
-    private final EventLoopGroup bizGroup;
 
     public HttpServer() {
         if (isLinux()) {
             this.bossGroup = new EpollEventLoopGroup(1);
             this.workerGroup = new EpollEventLoopGroup(128);
-            this.bizGroup = new EpollEventLoopGroup(64);
         } else {
             this.bossGroup = new NioEventLoopGroup(1);
             this.workerGroup = new NioEventLoopGroup(8);
-            this.bizGroup = new NioEventLoopGroup(64);
         }
     }
 
@@ -110,7 +105,7 @@ public class HttpServer implements BeanPostProcessor {
                             p.addLast(new HttpServerCodec());
                             p.addLast(new HttpObjectAggregator(65536));
                             p.addLast(new ChunkedWriteHandler());
-                            p.addLast(bizGroup, new NettyHttpServerHandler());
+                            p.addLast(new NettyHttpServerHandler());
                             // 禁用Nagle算法
                             ch.config().setOption(ChannelOption.TCP_NODELAY, true);
                         }
