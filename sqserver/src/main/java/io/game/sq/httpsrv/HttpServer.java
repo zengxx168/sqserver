@@ -1,12 +1,16 @@
 package io.game.sq.httpsrv;
 
+import cn.hutool.system.SystemUtil;
 import com.alibaba.fastjson.JSON;
 import io.game.sq.httpsrv.filter.Interceptor;
 import io.game.sq.web.domain.ApiResponse;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -34,6 +38,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Component
@@ -47,9 +53,21 @@ public class HttpServer implements BeanPostProcessor {
     // 拦截器，最大支持16个
     private final List<Interceptor> interceptors = new ArrayList<>(16);
 
-    private final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-    private final EventLoopGroup workerGroup = new NioEventLoopGroup(16);
-    private final EventLoopGroup bizGroup = new NioEventLoopGroup(1024);
+    private final EventLoopGroup bossGroup;
+    private final EventLoopGroup workerGroup;
+    private final EventLoopGroup bizGroup;
+
+    public HttpServer() {
+        if (isLinux()) {
+            this.bossGroup = new EpollEventLoopGroup(1);
+            this.workerGroup = new EpollEventLoopGroup(128);
+            this.bizGroup = new EpollEventLoopGroup(64);
+        } else {
+            this.bossGroup = new NioEventLoopGroup(1);
+            this.workerGroup = new NioEventLoopGroup(8);
+            this.bizGroup = new NioEventLoopGroup(64);
+        }
+    }
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -83,8 +101,10 @@ public class HttpServer implements BeanPostProcessor {
     public void start() {
         try {
             ServerBootstrap b = new ServerBootstrap();
+            // 优化内存分配
+            PooledByteBufAllocator allocator = new PooledByteBufAllocator();
             b.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
+                    .channel(isLinux() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
@@ -93,6 +113,9 @@ public class HttpServer implements BeanPostProcessor {
                             p.addLast(new HttpObjectAggregator(65536));
                             p.addLast(new ChunkedWriteHandler());
                             p.addLast(bizGroup, new NettyHttpServerHandler());
+                            // 禁用Nagle算法
+                            ch.config().setOption(ChannelOption.TCP_NODELAY, true);
+                            ch.config().setAllocator(allocator);
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)
@@ -111,6 +134,10 @@ public class HttpServer implements BeanPostProcessor {
         bossGroup.shutdownGracefully();
     }
 
+    private boolean isLinux() {
+        return SystemUtil.getOsInfo().isLinux();
+    }
+
     private String key(String[] params) {
         if (params[0].startsWith("method=")) {
             return String.format(format2, params[0], params[1]);
@@ -119,9 +146,21 @@ public class HttpServer implements BeanPostProcessor {
     }
 
     class NettyHttpServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+        ExecutorService executor = Executors.newFixedThreadPool(1024);
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
+            executor.submit(() -> {
+                try {
+                    // 业务处理
+                    this.handle(ctx, request);
+                } catch (Exception e) {
+                    log.error("业务处理异常", e);
+                }
+            });
+        }
+
+        private void handle(ChannelHandlerContext ctx, FullHttpRequest request) {
             FullHttpResponse response = null;
             try {
                 // 获取请求路径和 HTTP 方法
