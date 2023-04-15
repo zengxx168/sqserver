@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.MemoryAttribute;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ResourceLeakDetector;
 import jakarta.annotation.PreDestroy;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -117,6 +118,7 @@ public class HttpServer implements BeanPostProcessor {
                     .option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
+            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
             ChannelFuture f = b.bind(port).sync();
             log.info("HttpServer 启动成功，开放端口：{}", port);
         } catch (Exception e) {
