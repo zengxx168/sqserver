@@ -24,7 +24,7 @@
         <spring.version>6.0.0</spring.version>
         <slf4j-api.version>1.7.36</slf4j-api.version>
         <logback.version>1.2.11</logback.version>
-        <lombok.version>1.18.24</lombok.version>
+        <lombok.version>1.18.26</lombok.version>
     </properties>
 
     <dependencyManagement>
