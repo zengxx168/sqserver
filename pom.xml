@@ -19,7 +19,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <netty.version>4.1.86.Final</netty.version>
+        <netty.version>4.1.94.Final</netty.version>
         <bolt.version>1.6.6</bolt.version>
         <spring.version>6.0.0</spring.version>
         <slf4j-api.version>1.7.36</slf4j-api.version>
