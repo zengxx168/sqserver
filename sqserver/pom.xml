@@ -96,7 +96,7 @@
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-redis</artifactId>
-            <version>3.0.4</version>
+            <version>3.4.9</version>
         </dependency>
         <dependency>
             <groupId>io.lettuce</groupId>
